@@ -8,7 +8,7 @@ permissions:
   contents: read
   actions: write
 
-# 解决 Node 20 被 GitHub Actions 弃用导致的警告与报错
+# 允许临时使用 Node 20 兼容环境
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
@@ -25,24 +25,28 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: ./api/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            ./api/package-lock.json
 
       - name: 缓存依赖
         id: cache-npm
         uses: actions/cache@v4
         with:
-          path: ./api/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('./api/package-lock.json') }}
+          path: |
+            node_modules
+            ./api/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json', './api/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: 安装依赖
         if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
-        working-directory: ./api
-        run: npm install
+        run: |
+          npm install
+          npm run install
 
       - name: 执行签到
-        working-directory: ./api
         run: npm run main
         env:
           USERINFO: ${{ secrets.USERINFO }}
